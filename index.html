@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>TYME</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Courier New', Courier, monospace;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 24px;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 20px;
+      padding-bottom: 16px;
+    }
+
+    #wordmark {
+      font-size: 11px;
+      letter-spacing: 8px;
+      color: #555;
+    }
+
+    #dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #FF2D00;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    #body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-bottom: 60px;
+    }
+
+    #time {
+      font-size: clamp(72px, 22vw, 96px);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -4px;
+      line-height: 1;
+      transition: transform 0.1s ease;
+    }
+
+    #sub {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-top: 10px;
+      margin-bottom: 40px;
+    }
+
+    #period {
+      font-size: 22px;
+      letter-spacing: 4px;
+      color: #fff;
+    }
+
+    #seconds {
+      font-size: 14px;
+      letter-spacing: 2px;
+      color: #222;
+    }
+
+    #date {
+      font-size: 11px;
+      letter-spacing: 5px;
+      color: #555;
+      text-transform: uppercase;
+    }
+
+    #footer {
+      padding-bottom: 40px;
+    }
+
+    #divider {
+      height: 1px;
+      background: #1a1a1a;
+      margin-bottom: 24px;
+    }
+
+    #toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #label {
+      font-size: 11px;
+      letter-spacing: 6px;
+      color: #555;
+      font-family: inherit;
+    }
+
+    #chip {
+      border: 1px solid #1a1a1a;
+      padding: 6px 14px;
+      min-width: 52px;
+      text-align: center;
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #222;
+      background: transparent;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    #chip.on {
+      background: #fff;
+      border-color: #fff;
+      color: #000;
+    }
+
+    #note {
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: #2a2a2a;
+      margin-top: 10px;
+      height: 14px;
+    }
+
+    @keyframes pulse {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(0.88); }
+      100% { transform: scale(1); }
+    }
+
+    .pulse { animation: pulse 0.2s ease; }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <span id="wordmark">TYME</span>
+    <div id="dot"></div>
+  </div>
+
+  <div id="body">
+    <div id="time">00:00</div>
+    <div id="sub">
+      <span id="period">AM</span>
+      <span id="seconds">00</span>
+    </div>
+    <div id="date"></div>
+  </div>
+
+  <div id="footer">
+    <div id="divider"></div>
+    <div id="toggle-row" role="button" tabindex="0">
+      <span id="label">HOURLY ALERTS</span>
+      <div id="chip">OFF</div>
+    </div>
+    <div id="note"></div>
+  </div>
+
+  <script>
+    const DAYS  = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+    const $time   = document.getElementById('time');
+    const $period = document.getElementById('period');
+    const $secs   = document.getElementById('seconds');
+    const $date   = document.getElementById('date');
+    const $dot    = document.getElementById('dot');
+    const $chip   = document.getElementById('chip');
+    const $note   = document.getElementById('note');
+    const $row    = document.getElementById('toggle-row');
+
+    let alertsOn = false;
+    let notifPermission = Notification.permission;
+
+    function tick() {
+      const now  = new Date();
+      const h    = now.getHours();
+      const m    = now.getMinutes();
+      const s    = now.getSeconds();
+      const h12  = String(h % 12 || 12).padStart(2, '0');
+      const mm   = String(m).padStart(2, '0');
+      const ss   = String(s).padStart(2, '0');
+      const per  = h >= 12 ? 'PM' : 'AM';
+
+      $time.textContent   = `${h12}:${mm}`;
+      $period.textContent = per;
+      $secs.textContent   = ss;
+      $date.textContent   = `${DAYS[now.getDay()]} · ${MONTHS[now.getMonth()]} ${now.getDate()} · ${now.getFullYear()}`;
+    }
+
+    setInterval(tick, 1000);
+    tick();
+
+    function getNotifCopy(h) {
+      const t = (() => {
+        const now = new Date();
+        const hr  = String(h % 12 || 12);
+        const per = h >= 12 ? 'PM' : 'AM';
+        return `${hr}:00 ${per}`;
+      })();
+      if (h < 5)  return [`IT'S ${t}. STILL UP?`, `${t}. YOU SHOULD BE SLEEPING.`][h % 2];
+      if (h < 8)  return `MORNING. IT'S ${t}.`;
+      if (h < 12) return [`IT'S ${t}. GET TO WORK.`, `${t}. STAY FOCUSED.`][h % 2];
+      if (h === 12) return `IT'S NOON.`;
+      if (h < 17) return `IT'S ${t}.`;
+      if (h < 20) return `EVENING. IT'S ${t}.`;
+      return `${t}. WIND DOWN.`;
+    }
+
+    function scheduleNotifications() {
+      const now = new Date();
+      for (let i = 1; i <= 24; i++) {
+        const fire = new Date(now);
+        fire.setMinutes(0, 0, 0);
+        fire.setHours(now.getHours() + i);
+        const delay = fire - now;
+        setTimeout(() => {
+          if (alertsOn && Notification.permission === 'granted') {
+            new Notification('TYME', { body: getNotifCopy(fire.getHours()), silent: false });
+            scheduleNext(fire);
+          }
+        }, delay);
+      }
+    }
+
+    function scheduleNext(from) {
+      const next = new Date(from);
+      next.setHours(next.getHours() + 24);
+      const delay = next - new Date();
+      setTimeout(() => {
+        if (alertsOn && Notification.permission === 'granted') {
+          new Notification('TYME', { body: getNotifCopy(next.getHours()) });
+          scheduleNext(next);
+        }
+      }, delay);
+    }
+
+    async function toggleAlerts() {
+      $time.classList.add('pulse');
+      $time.addEventListener('animationend', () => $time.classList.remove('pulse'), { once: true });
+
+      if (alertsOn) {
+        alertsOn = false;
+        $chip.textContent = 'OFF';
+        $chip.classList.remove('on');
+        $dot.style.opacity = '0';
+        $note.textContent = '';
+        return;
+      }
+
+      if (Notification.permission === 'default') {
+        notifPermission = await Notification.requestPermission();
+      }
+
+      if (Notification.permission === 'granted') {
+        alertsOn = true;
+        $chip.textContent = 'ON';
+        $chip.classList.add('on');
+        $dot.style.opacity = '1';
+        $note.textContent = 'ALERTS ACTIVE';
+        scheduleNotifications();
+        new Notification('TYME', { body: "HOURLY ALERTS ARE ON." });
+      } else {
+        $note.textContent = 'ALLOW NOTIFICATIONS IN SETTINGS';
+        $note.style.color = '#FF2D00';
+      }
+    }
+
+    $row.addEventListener('click', toggleAlerts);
+    $row.addEventListener('keydown', e => e.key === 'Enter' && toggleAlerts());
+  </script>
+</body>
+</html>
