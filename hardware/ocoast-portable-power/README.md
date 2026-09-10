@@ -5,8 +5,10 @@ feeds the OP-XY. One battery, two synths, zero wall warts.
 
 ## Why this works
 
-The 0-Coast wants **15V DC, center-positive, 5.5 × 2.1 mm barrel** (the stock
-wall wart is 15V / 1A; the unit itself draws well under that). USB-C Power
+The 0-Coast wants **15V DC, center-positive, 5.5 × 2.1 mm barrel**. Verified
+from the stock adapter's label (CUI Inc SMI18-15): output **15.0V ⎓ 1.3A,
+19.5W max**, center-positive per the polarity symbol; the unit itself draws
+well under that ceiling. USB-C Power
 Delivery happens to define **15V as a standard voltage rung** (the 15V @ 3A
 profile in 45W+ chargers). So a PD power bank plus a "PD trigger" cable that
 negotiates a fixed 15V gives you exactly the voltage the 0-Coast was designed
